@@ -1,43 +1,193 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <meta
-      name="description"
-      content="Web site created using create-react-app"
-    />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Talkie Now</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        height: 100vh;
+        background: linear-gradient(to right, #38ef7d, #11998e);
+        font-family: Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .box {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 30px;
+        max-width: 400px;
+        width: 100%;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(10px);
+      }
+    </style>
 
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
-    -->
-    <title>React App</title>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+
+    <!-- React -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
   </head>
+
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
+    <div class="box">
+      <div id="root"></div>
+    </div>
 
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
+    <script type="text/javascript">
+      const firebaseConfig = {
+        apiKey: "AIzaSyDD6qmujmBByoCasbvnsr_lgdPjrJYHn8c",
+        authDomain: "talkie-now.firebaseapp.com",
+        projectId: "talkie-now",
+        storageBucket: "talkie-now.firebasestorage.app",
+        messagingSenderId: "80029536527",
+        appId: "1:80029536527:web:d69ea9f2421cd444f92e7a",
+        measurementId: "G-7BP5G1EZFB"
+      };
 
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
+      const app = firebase.initializeApp(firebaseConfig);
+      const auth = firebase.auth();
+      const googleProvider = new firebase.auth.GoogleAuthProvider();
+    </script>
+
+    <script type="text/javascript">
+      const { useState, useEffect } = React;
+
+      function App() {
+        const [email, setEmail] = useState("");
+        const [password, setPassword] = useState("");
+        const [user, setUser] = useState(null);
+        const [remember, setRemember] = useState(false);
+        const [loading, setLoading] = useState(true);
+
+        useEffect(() => {
+          const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+            setUser(currentUser);
+            setLoading(false);
+          });
+          return () => unsubscribe();
+        }, []);
+
+        const handleLogin = async (e) => {
+          e.preventDefault();
+          try {
+            if (remember) localStorage.setItem("rememberedEmail", email);
+            await auth.signInWithEmailAndPassword(email, password);
+          } catch (error) {
+            if (error.code === "auth/user-not-found") {
+              try {
+                await auth.createUserWithEmailAndPassword(email, password);
+              } catch (signupError) {
+                alert("Signup failed: " + signupError.message);
+              }
+            } else {
+              alert("Login failed: " + error.message);
+            }
+          }
+        };
+
+        const handleGoogleLogin = async () => {
+          try {
+            await auth.signInWithPopup(googleProvider);
+          } catch (error) {
+            alert("Google login failed: " + error.message);
+          }
+        };
+
+        const handleLogout = () => {
+          auth.signOut();
+        };
+
+        useEffect(() => {
+          const remembered = localStorage.getItem("rememberedEmail");
+          if (remembered) {
+            setEmail(remembered);
+            setRemember(true);
+          }
+        }, []);
+
+        if (loading) return <p style={{ color: "white" }}>Loading...</p>;
+
+        return (
+          <div>
+            {user ? (
+              <div style={{ color: "white", textAlign: "center" }}>
+                <h2>Welcome, {user.email}</h2>
+                <button onClick={handleLogout} style={buttonStyle}>Logout</button>
+              </div>
+            ) : (
+              <form onSubmit={handleLogin}>
+                <input
+                  type="email"
+                  value={email}
+                  placeholder="Email"
+                  required
+                  onChange={(e) => setEmail(e.target.value)}
+                  style={inputStyle}
+                />
+                <input
+                  type="password"
+                  value={password}
+                  placeholder="Password"
+                  required
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={inputStyle}
+                />
+                <label style={{ color: "white", fontSize: "14px" }}>
+                  <input
+                    type="checkbox"
+                    checked={remember}
+                    onChange={() => setRemember(!remember)}
+                    style={{ marginRight: "5px" }}
+                  />
+                  Remember me
+                </label>
+                <button type="submit" style={buttonStyle}>Login / Sign Up</button>
+                <hr style={{ borderColor: "white", margin: "20px 0" }} />
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  style={{ ...buttonStyle, backgroundColor: "#DB4437" }}
+                >
+                  Sign in with Google
+                </button>
+              </form>
+            )}
+          </div>
+        );
+      }
+
+      const inputStyle = {
+        margin: "10px 0",
+        padding: "10px",
+        borderRadius: "5px",
+        border: "none",
+        width: "100%",
+        fontSize: "16px"
+      };
+
+      const buttonStyle = {
+        marginTop: "15px",
+        padding: "10px",
+        borderRadius: "5px",
+        border: "none",
+        width: "100%",
+        fontSize: "16px",
+        backgroundColor: "#4CAF50",
+        color: "white",
+        cursor: "pointer"
+      };
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
   </body>
 </html>
